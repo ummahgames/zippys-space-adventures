@@ -1,126 +1,13 @@
-const state = {
-  stars: Number(localStorage.getItem('zippy-stars') || 0),
-  suit: localStorage.getItem('zippy-suit') || 'pink',
-  sound: localStorage.getItem('zippy-sound') !== 'off',
-  mission: 0,
-  totalMissions: 5,
-  currentAnswer: 0,
-  locked: false,
-};
-
-const $ = (s) => document.querySelector(s);
-const $$ = (s) => [...document.querySelectorAll(s)];
-
-function showView(id) {
-  $$('.view').forEach(v => v.classList.toggle('active', v.id === id));
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-$$('[data-view]').forEach(btn => btn.addEventListener('click', () => showView(btn.dataset.view)));
-$('.planet-card.unlocked').addEventListener('click', startMission);
-$('#nextMissionBtn').addEventListener('click', startMission);
-
-function updateHud() {
-  $('#starCount').textContent = state.stars;
-  $('#soundBtn').textContent = state.sound ? '🔊' : '🔇';
-}
-
-function generateQuestion() {
-  const a = Math.floor(Math.random() * 5) + 1;
-  const b = Math.floor(Math.random() * 5) + 1;
-  state.currentAnswer = a + b;
-  $('#equation').textContent = `${a} + ${b} = ?`;
-  $('#questionVisual').innerHTML = `${'<span>⭐</span>'.repeat(a)} <strong>+</strong> ${'<span>⭐</span>'.repeat(b)}`;
-  const choices = new Set([state.currentAnswer]);
-  while (choices.size < 3) {
-    const offset = Math.floor(Math.random() * 5) - 2;
-    const candidate = Math.max(1, state.currentAnswer + offset);
-    choices.add(candidate);
-  }
-  const shuffled = [...choices].sort(() => Math.random() - .5);
-  $('#answers').innerHTML = shuffled.map(n => `<button class="answer-btn" data-answer="${n}">${n}</button>`).join('');
-  $$('.answer-btn').forEach(btn => btn.addEventListener('click', handleAnswer));
-}
-
-function startMission() {
-  state.mission = 0;
-  state.locked = false;
-  showView('game');
-  nextQuestion();
-}
-
-function nextQuestion() {
-  state.mission += 1;
-  $('#missionText').textContent = `Mission ${state.mission} of ${state.totalMissions}`;
-  $('#progressBar').style.width = `${(state.mission / state.totalMissions) * 100}%`;
-  $('#feedback').textContent = 'Zippy says: You can do it! 🌟';
-  state.locked = false;
-  generateQuestion();
-}
-
-function handleAnswer(e) {
-  if (state.locked) return;
-  state.locked = true;
-  const selected = Number(e.currentTarget.dataset.answer);
-  if (selected === state.currentAnswer) {
-    e.currentTarget.classList.add('correct');
-    $('#feedback').textContent = 'Amazing! Star power restored! ✨';
-    ping(760, .08);
-    state.stars += 1;
-    localStorage.setItem('zippy-stars', state.stars);
-    updateHud();
-    setTimeout(() => {
-      if (state.mission >= state.totalMissions) showView('complete');
-      else nextQuestion();
-    }, 650);
-  } else {
-    e.currentTarget.classList.add('wrong');
-    $('#feedback').textContent = 'Almost! Count the stars and try again. 💫';
-    ping(250, .09);
-    setTimeout(() => {
-      e.currentTarget.classList.remove('wrong');
-      state.locked = false;
-    }, 550);
-  }
-}
-
-function ping(freq, duration) {
-  if (!state.sound) return;
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(.08, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + duration);
-    osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + duration);
-  } catch (_) {}
-}
-
-$('#soundBtn').addEventListener('click', () => {
-  state.sound = !state.sound;
-  localStorage.setItem('zippy-sound', state.sound ? 'on' : 'off');
-  updateHud();
-});
-
-$$('[data-suit]').forEach(btn => btn.addEventListener('click', () => {
-  state.suit = btn.dataset.suit;
-  localStorage.setItem('zippy-suit', state.suit);
-  $$('.swatch').forEach(s => s.classList.toggle('active', s.dataset.suit === state.suit));
-  $('#astronautPreview').className = `astronaut-preview ${state.suit}`;
-}));
-
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault(); deferredPrompt = e; $('#installBtn').hidden = false;
-});
-$('#installBtn').addEventListener('click', async () => {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; $('#installBtn').hidden = true;
-});
-
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
-
-$('#astronautPreview').className = `astronaut-preview ${state.suit}`;
-$$('.swatch').forEach(s => s.classList.toggle('active', s.dataset.suit === state.suit));
-updateHud();
+const worlds=[['moon','Moon Base','Single-digit addition',0,5,'🌙','Power the Moon Station','Count the star crystals!','+'],['mars','Mars','Addition to 10',5,10,'🔴','Wake the Mars Rover','Zazo found red rocks!','+'],['jupiter','Jupiter','Double-digit addition',10,35,'🟠','Fuel Jupiter Jump','Group the moon crystals.','+'],['saturn','Saturn','Subtraction to 20',15,20,'🪐','Save Saturn’s Rings','Some stars zoomed away!','-'],['sun','The Sun','Mixed math challenge',20,50,'☀️','Light the Solar Beacon','You are ready for solar math!','mixed']];
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],state={stars:+localStorage.getItem('mariam-stars')||0,sound:localStorage.getItem('mariam-sound')!=='off',suit:localStorage.getItem('mariam-suit')||'pink',helmet:localStorage.getItem('mariam-helmet')||'bubble',boots:localStorage.getItem('mariam-boots')||'moon',world:worlds[0],mission:0,answer:0,locked:false};
+function show(id){$$('.view').forEach(x=>x.classList.toggle('active',x.id===id));scrollTo({top:0,behavior:'smooth'})}function save(k,v){localStorage.setItem('mariam-'+k,v)}function open(w){return state.stars>=w[3]}function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function map(){ $('#planetGrid').innerHTML=worlds.map(w=>{let ok=open(w);return '<button class="planet '+w[0]+'" '+(ok?'data-planet="'+w[0]+'"':'disabled')+'><b>'+w[5]+'</b><h3>'+w[1]+'</h3><p>'+w[2]+'</p><small>'+ (ok?'Route ready →':'🔒 Earn '+w[3]+' stars')+'</small></button>'}).join('');$$('[data-planet]').forEach(b=>b.onclick=()=>start(worlds.find(w=>w[0]===b.dataset.planet)))}
+function update(){ $('#starCount').textContent=state.stars;$('#soundBtn').textContent=state.sound?'🔊':'🔇';map();character()}
+function character(){let h={bubble:'🪖',cap:'🧢',crown:'👑'}[state.helmet],b={moon:'🥾',comet:'👟',star:'⭐'}[state.boots];$$('.mariam i').forEach(x=>x.textContent=h);$$('.mariam small').forEach(x=>x.textContent=b);$$('.mariam').forEach(x=>x.dataset.suit=state.suit);$$('.choices').forEach(row=>$$('button',row).forEach(btn=>btn.classList.toggle('active',btn.dataset.value===state[row.dataset.choice])))}
+function start(w=state.world){state.world=w;state.mission=0;$('#missionPlanet').textContent=w[1];$('#missionTitle').textContent=w[6];$('#missionHint').textContent=w[7];$('#missionPlanetArt').textContent=w[5];show('game');next()}
+function next(){state.mission++;state.locked=false;$('#missionText').textContent='Mission '+state.mission+' of 5';$('#progressBar').style.width=state.mission/5*100+'%';$('#feedback').textContent='Zazo says: Choose the answer to power the ship!';question()}
+function question(){let w=state.world,op=w[8]==='mixed'?(Math.random()>.45?'+':'-'):w[8],a,b;if(w[0]==='moon'){a=rnd(1,5);b=rnd(1,5)}else if(w[0]==='mars'){a=rnd(1,9);b=rnd(1,10-a)}else{a=rnd(10,w[4]);b=rnd(2,Math.min(18,w[4]-1))}if(op==='-'&&b>a)[a,b]=[b,a];state.answer=op==='+'?a+b:a-b;$('#equation').textContent=a+' '+op+' '+b+' = ?';$('#questionVisual').innerHTML=Array.from({length:Math.min(op==='+'?a+b:a,14)},()=>'<span>✦</span>').join('');let set=new Set([state.answer]);while(set.size<3){let n=Math.max(0,state.answer+rnd(-5,5));if(n!==state.answer)set.add(n)}$('#answers').innerHTML=[...set].sort(()=>Math.random()-.5).map(n=>'<button data-answer="'+n+'">'+n+'</button>').join('');$$('#answers button').forEach(x=>x.onclick=answer)}
+function answer(e){if(state.locked)return;let b=e.currentTarget;state.locked=true;if(+b.dataset.answer===state.answer){b.classList.add('correct');$('#feedback').textContent='Correct! Mariam’s ship gets a star boost! ✨';tone(760);state.stars++;save('stars',state.stars);update();setTimeout(()=>state.mission===5?complete():next(),650)}else{b.classList.add('wrong');$('#feedback').textContent='Almost! Zazo says count one more time. 💫';tone(250);setTimeout(()=>{b.classList.remove('wrong');state.locked=false},550)}}
+function complete(){let n=worlds[worlds.indexOf(state.world)+1];$('#completeText').textContent=n&&open(n)?'You collected 5 Star Energy. '+n[1]+' is now on your map!':'You collected 5 Star Energy. Zazo is proud of you!';$('#nextMissionBtn').textContent=n&&open(n)?'Fly to '+n[1]+' →':'Play this world again';$('#nextMissionBtn').onclick=()=>start(n&&open(n)?n:state.world);show('complete')}
+function tone(f){if(!state.sound)return;try{let c=new AudioContext,o=c.createOscillator(),g=c.createGain();o.frequency.value=f;g.gain.value=.06;o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.08)}catch(e){}}
+$$('[data-view]').forEach(x=>x.onclick=()=>show(x.dataset.view));$('#soundBtn').onclick=()=>{state.sound=!state.sound;save('sound',state.sound?'on':'off');update()};$$('.choices').forEach(row=>row.onclick=e=>{if(!e.target.matches('button'))return;state[row.dataset.choice]=e.target.dataset.value;save(row.dataset.choice,e.target.dataset.value);character()});update();
